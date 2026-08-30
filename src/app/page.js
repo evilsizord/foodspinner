@@ -1,6 +1,6 @@
 "use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 
 const WHEEL_COLORS = [
   "#f25f5c",
@@ -15,16 +15,7 @@ const WHEEL_COLORS = [
   "#ffd166",
 ];
 
-const SAMPLE_RESTAURANTS = [
-  { name: "Green Bowl", category: "Healthy" },
-  { name: "Mama Roma", category: "Italian" },
-  { name: "Burger Drop", category: "Fast Food" },
-  { name: "Taco Harbor", category: "Mexican" },
-  { name: "Noodle Nest", category: "Asian" },
-  { name: "Sunrise Diner", category: "Breakfast" },
-  { name: "Spice Route", category: "Indian" },
-  { name: "Ocean Grill", category: "Seafood" },
-];
+const MEALS = ["lunch", "dinner"];
 
 const DEFAULT_GOOGLE_SHEET_URL = process.env.NEXT_PUBLIC_GOOGLE_SHEET_URL || "";
 
@@ -93,6 +84,16 @@ function parseRestaurants(csvText) {
   const categoryIndex = header.findIndex((cell) =>
     ["category", "type", "cuisine"].includes(cell),
   );
+  const orderIndexes = header
+    .map((cell, index) => {
+      const normalized = cell.toLowerCase().replace(/[^a-z0-9]/g, "");
+      if (normalized === "order" || /^order[1-4]$/.test(normalized)) {
+        return index;
+      }
+      return -1;
+    })
+    .filter((index) => index !== -1)
+    .slice(0, 4);
 
   const hasHeader = nameIndex !== -1 || categoryIndex !== -1;
   const startIndex = hasHeader ? 1 : 0;
@@ -104,25 +105,25 @@ function parseRestaurants(csvText) {
     .map((cells) => {
       const name = (cells[resolvedNameIndex] || "").trim();
       const category = (cells[resolvedCategoryIndex] || "Uncategorized").trim();
-      return { name, category: category || "Uncategorized" };
+      const orders = orderIndexes
+        .map((index) => (cells[index] || "").trim())
+        .filter((value) => value.length > 0)
+        .slice(0, 4);
+      return { name, category: category || "Uncategorized", orders };
     })
     .filter((restaurant) => restaurant.name.length > 0)
     .slice(0, 15);
 }
 
-function toGoogleCsvUrl(input) {
+function toGoogleSheetId(input) {
   const trimmed = input.trim();
   if (!trimmed) {
     return "";
   }
 
-  if (trimmed.includes("tqx=out:csv")) {
-    return trimmed;
-  }
-
   const idOnlyMatch = trimmed.match(/^[a-zA-Z0-9-_]{20,}$/);
   if (idOnlyMatch) {
-    return `https://docs.google.com/spreadsheets/d/${trimmed}/gviz/tq?tqx=out:csv&gid=0`;
+    return trimmed;
   }
 
   const url = new URL(trimmed);
@@ -131,8 +132,11 @@ function toGoogleCsvUrl(input) {
     throw new Error("Could not find a spreadsheet ID in that URL.");
   }
 
-  const gid = url.searchParams.get("gid") || "0";
-  return `https://docs.google.com/spreadsheets/d/${idMatch[1]}/gviz/tq?tqx=out:csv&gid=${gid}`;
+  return idMatch[1];
+}
+
+function toGoogleCsvUrl(sheetId, tabName) {
+  return `https://docs.google.com/spreadsheets/d/${sheetId}/gviz/tq?tqx=out:csv&sheet=${encodeURIComponent(tabName)}`;
 }
 
 function toPoint(cx, cy, radius, angleFromTopDeg) {
@@ -186,55 +190,55 @@ function Wheel({ entries, rotation }) {
 }
 
 export default function HomePage() {
-  const [sheetUrlInput, setSheetUrlInput] = useState(DEFAULT_GOOGLE_SHEET_URL);
-  const [restaurants, setRestaurants] = useState(SAMPLE_RESTAURANTS);
-  const [selectedCategory, setSelectedCategory] = useState("All");
-  const [winner, setWinner] = useState("");
+  const [restaurantsByMeal, setRestaurantsByMeal] = useState({
+    lunch: [],
+    dinner: [],
+  });
+  const [selectedMeal, setSelectedMeal] = useState("lunch");
+  const [winnerRestaurant, setWinnerRestaurant] = useState(null);
   const [status, setStatus] = useState("");
   const [loading, setLoading] = useState(false);
   const [spinning, setSpinning] = useState(false);
   const [rotation, setRotation] = useState(0);
 
-  const categories = useMemo(() => {
-    const unique = new Set(restaurants.map((item) => item.category));
-    return ["All", ...Array.from(unique)];
-  }, [restaurants]);
+  const hasConfiguredSheet = DEFAULT_GOOGLE_SHEET_URL.trim().length > 0;
+  const restaurants = restaurantsByMeal[selectedMeal] || [];
+  const canSpin = restaurants.length >= 2 && !spinning;
 
-  const filtered = useMemo(() => {
-    if (selectedCategory === "All") {
-      return restaurants;
-    }
-    return restaurants.filter((item) => item.category === selectedCategory);
-  }, [restaurants, selectedCategory]);
-
-  const canSpin = filtered.length >= 2 && !spinning;
-
-  async function loadFromSheet() {
+  async function loadFromSheet(inputValue) {
     try {
       setLoading(true);
       setStatus("");
-      setWinner("");
+      setWinnerRestaurant(null);
 
-      const csvUrl = toGoogleCsvUrl(sheetUrlInput);
-      if (!csvUrl) {
+      const sheetId = toGoogleSheetId(inputValue);
+      if (!sheetId) {
         throw new Error("Paste a Google Sheet URL (or sheet ID) first.");
       }
 
-      const response = await fetch(csvUrl, { cache: "no-store" });
-      if (!response.ok) {
-        throw new Error("Could not fetch spreadsheet. Check sharing and publish settings.");
+      const responses = await Promise.all(
+        MEALS.map((meal) => fetch(toGoogleCsvUrl(sheetId, meal), { cache: "no-store" })),
+      );
+
+      const failedMealIndex = responses.findIndex((response) => !response.ok);
+      if (failedMealIndex !== -1) {
+        throw new Error(
+          `Could not fetch the ${MEALS[failedMealIndex]} tab. Check sharing and tab names (lunch, dinner).`,
+        );
       }
 
-      const text = await response.text();
-      const parsed = parseRestaurants(text);
+      const texts = await Promise.all(responses.map((response) => response.text()));
+      const nextByMeal = {
+        lunch: parseRestaurants(texts[0]),
+        dinner: parseRestaurants(texts[1]),
+      };
 
-      if (parsed.length < 2) {
-        throw new Error("Need at least two restaurants in the sheet.");
+      if (nextByMeal.lunch.length < 2 || nextByMeal.dinner.length < 2) {
+        throw new Error("Both tabs must have at least two restaurants.");
       }
 
-      setRestaurants(parsed);
-      setSelectedCategory("All");
-      setStatus(`Loaded ${parsed.length} restaurants.`);
+      setRestaurantsByMeal(nextByMeal);
+      setStatus(`Loaded ${nextByMeal.lunch.length} lunch and ${nextByMeal.dinner.length} dinner restaurants.`);
     } catch (error) {
       setStatus(error.message || "Could not load sheet.");
     } finally {
@@ -242,20 +246,25 @@ export default function HomePage() {
     }
   }
 
-  function useSampleData() {
-    setRestaurants(SAMPLE_RESTAURANTS);
-    setSelectedCategory("All");
-    setWinner("");
-    setStatus("Loaded sample data.");
-  }
+  useEffect(() => {
+    if (!hasConfiguredSheet) {
+      return;
+    }
+
+    const timeoutId = window.setTimeout(() => {
+      loadFromSheet(DEFAULT_GOOGLE_SHEET_URL);
+    }, 500);
+
+    return () => window.clearTimeout(timeoutId);
+  }, [hasConfiguredSheet]);
 
   function spinWheel() {
     if (!canSpin) {
       return;
     }
 
-    const pickIndex = Math.floor(Math.random() * filtered.length);
-    const segmentAngle = 360 / filtered.length;
+    const pickIndex = Math.floor(Math.random() * restaurants.length);
+    const segmentAngle = 360 / restaurants.length;
     const centerAngle = pickIndex * segmentAngle + segmentAngle / 2;
     const currentNormalized = ((rotation % 360) + 360) % 360;
     const landingOffset = ((360 - centerAngle - currentNormalized) % 360 + 360) % 360;
@@ -263,11 +272,11 @@ export default function HomePage() {
     const finalRotation = rotation + extraTurns + landingOffset;
 
     setSpinning(true);
-    setWinner("");
+    setWinnerRestaurant(null);
     setRotation(finalRotation);
 
     window.setTimeout(() => {
-      setWinner(filtered[pickIndex].name);
+      setWinnerRestaurant(restaurants[pickIndex]);
       setSpinning(false);
     }, 3600);
   }
@@ -278,87 +287,67 @@ export default function HomePage() {
         <p className="eyebrow">Foodspinner</p>
         <h1>Spin For Your Next Meal</h1>
         <p className="subtitle">
-          Load restaurants from a Google Sheet, filter by category, then spin the wheel.
+          Load restaurants from a Google Sheet and spin the wheel.
         </p>
       </header>
 
-      <section className="panel controls" aria-label="Data source and filters">
-        <label htmlFor="sheet-url" className="field-label">
-          Google Sheet URL or Sheet ID
-        </label>
-        <div className="row">
-          <input
-            id="sheet-url"
-            type="text"
-            className="text-input"
-            placeholder="https://docs.google.com/spreadsheets/d/..."
-            value={sheetUrlInput}
-            onChange={(event) => setSheetUrlInput(event.target.value)}
-          />
-        </div>
-        <div className="row actions">
-          <button type="button" className="btn btn-primary" onClick={loadFromSheet} disabled={loading}>
-            {loading ? "Loading..." : "Load Sheet"}
-          </button>
-          <button type="button" className="btn btn-ghost" onClick={useSampleData} disabled={loading}>
-            Use Sample Data
-          </button>
-        </div>
+      <section className="panel controls" aria-label="Data source">
+        <div className="controls-head">
+          <p className="status" aria-live="polite">
+            {status || (hasConfiguredSheet
+              ? `Ready. ${restaurants.length} ${selectedMeal} restaurants loaded.`
+              : "Set NEXT_PUBLIC_GOOGLE_SHEET_URL in app config.")}
+          </p>
 
-        <div className="row split">
-          <label htmlFor="category" className="field-label">
-            Category
-          </label>
-          <select
-            id="category"
-            className="select"
-            value={selectedCategory}
-            onChange={(event) => setSelectedCategory(event.target.value)}
-          >
-            {categories.map((category) => (
-              <option key={category} value={category}>
-                {category}
-              </option>
+          <div className="meal-toggle meal-toggle-compact" role="group" aria-label="Meal selection">
+            {MEALS.map((meal) => (
+              <button
+                key={meal}
+                type="button"
+                className={`btn btn-toggle btn-toggle-compact ${selectedMeal === meal ? "is-active" : ""}`}
+                onClick={() => {
+                  setSelectedMeal(meal);
+                  setWinnerRestaurant(null);
+                }}
+                disabled={loading || spinning}
+              >
+                {meal[0].toUpperCase() + meal.slice(1)}
+              </button>
             ))}
-          </select>
+          </div>
         </div>
-
-        <p className="status" aria-live="polite">
-          {status || `Ready. ${restaurants.length} restaurants loaded.`}
-        </p>
       </section>
 
       <section className="panel spinner" aria-label="Restaurant spinner">
-        <div className="wheel-wrap">
-          <div className="pointer" aria-hidden="true" />
-          <div className={`wheel-shell ${spinning ? "is-spinning" : ""}`}>
-            {filtered.length > 0 ? (
-              <Wheel entries={filtered} rotation={rotation} />
-            ) : (
-              <div className="empty-wheel">No restaurants in this category.</div>
-            )}
-          </div>
-        </div>
-
         <button type="button" className="btn btn-spin" onClick={spinWheel} disabled={!canSpin}>
           {spinning ? "Spinning..." : "Spin"}
         </button>
 
-        <p className="winner" aria-live="polite">
-          {winner ? `Tonight: ${winner}` : "Spin to pick a restaurant."}
-        </p>
-      </section>
+        <div className="wheel-wrap">
+          <div className="pointer" aria-hidden="true" />
+          <div className={`wheel-shell ${spinning ? "is-spinning" : ""}`}>
+            {restaurants.length > 0 ? (
+              <Wheel entries={restaurants} rotation={rotation} />
+            ) : (
+              <div className="empty-wheel">No restaurants loaded.</div>
+            )}
+          </div>
+        </div>
 
-      <section className="panel list" aria-label="Restaurant list">
-        <h2>Restaurants on Wheel ({filtered.length})</h2>
-        <ul>
-          {filtered.map((item, index) => (
-            <li key={`${item.name}-${index}`}>
-              <span>{item.name}</span>
-              <span>{item.category}</span>
-            </li>
-          ))}
-        </ul>
+        <p className="winner" aria-live="polite">
+          {winnerRestaurant ? `Tonight: ${winnerRestaurant.name}` : "Spin to pick a restaurant."}
+        </p>
+
+        {winnerRestaurant?.orders?.length > 0 ? (
+          <div className="winner-orders" aria-live="polite">
+            <p>What to order:</p>
+            <ul>
+              {winnerRestaurant.orders.map((order, index) => (
+                <li key={`${winnerRestaurant.name}-order-${index}`}>{order}</li>
+              ))}
+            </ul>
+          </div>
+        ) : null}
       </section>
     </main>
   );

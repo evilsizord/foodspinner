@@ -76,6 +76,14 @@ body {
   gap: 0.6rem;
 }
 
+.controls-head {
+  display: flex;
+  gap: 0.6rem;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+}
+
 .field-label {
   font-size: 0.84rem;
   font-weight: 600;
@@ -147,11 +155,49 @@ body {
   display: grid;
   gap: 0.75rem;
   justify-items: center;
+  width: 100%;
+}
+
+.meal-toggle {
+  width: 100%;
+  max-width: 980px;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 0.45rem;
+}
+
+.meal-toggle-compact {
+  width: auto;
+  max-width: none;
+  grid-auto-flow: column;
+  grid-template-columns: none;
+  gap: 0.35rem;
+  justify-content: end;
+}
+
+.btn-toggle {
+  border-radius: 12px;
+  min-height: 2.7rem;
+  color: #1f2937;
+  background: #e8edf5;
+}
+
+.btn-toggle-compact {
+  min-height: 1.85rem;
+  border-radius: 999px;
+  padding: 0.2rem 0.65rem;
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.btn-toggle.is-active {
+  color: #ffffff;
+  background: linear-gradient(90deg, #0f766e, #0b9a8f);
 }
 
 .wheel-wrap {
-  width: min(100%, 92vw);
-  max-width: 430px;
+  width: 75%;
+  max-width: 980px;
   aspect-ratio: 1 / 1;
   position: relative;
   margin-top: 0.2rem;
@@ -228,42 +274,40 @@ body {
   font-weight: 700;
 }
 
-.list h2 {
+.winner-orders {
+  width: min(100%, 640px);
+  border: 1px solid #d8e2f0;
+  border-radius: 14px;
+  background: #f8fbff;
+  padding: 0.75rem 0.9rem;
+}
+
+.winner-orders p {
   margin: 0;
-  font-size: 1.02rem;
-}
-
-.list ul {
-  list-style: none;
-  margin: 0.6rem 0 0;
-  padding: 0;
-  display: grid;
-  gap: 0.45rem;
-}
-
-.list li {
-  display: flex;
-  justify-content: space-between;
-  gap: 0.9rem;
-  border-radius: 10px;
-  background: #f6f8fc;
-  border: 1px solid #e2e8f0;
-  padding: 0.55rem 0.65rem;
   font-size: 0.9rem;
+  font-weight: 700;
+  color: #1f2937;
 }
 
-.list li span:last-child {
-  color: #4b5563;
-  text-align: right;
+.winner-orders ul {
+  margin: 0.45rem 0 0;
+  padding-left: 1.05rem;
+  display: grid;
+  gap: 0.25rem;
+}
+
+.winner-orders li {
+  font-size: 0.9rem;
+  color: #374151;
 }
 
 @media (min-width: 900px) {
   .page {
-    grid-template-columns: 1fr 1fr;
+    grid-template-columns: 1fr;
     grid-template-areas:
-      "hero hero"
-      "controls spinner"
-      "list spinner";
+      "hero"
+      "controls"
+      "spinner";
     padding: 1.5rem 1.1rem 2.8rem;
     gap: 1rem;
   }
@@ -279,9 +323,5 @@ body {
   .spinner {
     grid-area: spinner;
     align-content: start;
-  }
-
-  .list {
-    grid-area: list;
   }
 }

@@ -74,6 +74,9 @@ body {
 .controls {
   display: grid;
   gap: 0.6rem;
+  background: transparent;
+  border: 0;
+  box-shadow: none;
 }
 
 .controls-head {

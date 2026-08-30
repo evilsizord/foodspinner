@@ -336,7 +336,7 @@ export default function HomePage() {
           {winnerRestaurant ? (
             <>Let&rsquo;s Get: <span className="place">{winnerRestaurant.name}!</span></>
           ) : (
-            "Spin to pick a restaurant."
+            ""
           )}
         </p>
 

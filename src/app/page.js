@@ -84,10 +84,10 @@ function parseRestaurants(csvText) {
   const categoryIndex = header.findIndex((cell) =>
     ["category", "type", "cuisine"].includes(cell),
   );
-  const orderIndexes = header
+  const favoriteIndexes = header
     .map((cell, index) => {
       const normalized = cell.toLowerCase().replace(/[^a-z0-9]/g, "");
-      if (normalized === "order" || /^order[1-4]$/.test(normalized)) {
+      if (normalized === "favorites" || /^favorites[1-4]$/.test(normalized)) {
         return index;
       }
       return -1;
@@ -105,11 +105,11 @@ function parseRestaurants(csvText) {
     .map((cells) => {
       const name = (cells[resolvedNameIndex] || "").trim();
       const category = (cells[resolvedCategoryIndex] || "Uncategorized").trim();
-      const orders = orderIndexes
+      const favorites = favoriteIndexes
         .map((index) => (cells[index] || "").trim())
         .filter((value) => value.length > 0)
         .slice(0, 4);
-      return { name, category: category || "Uncategorized", orders };
+      return { name, category: category || "Uncategorized", favorites };
     })
     .filter((restaurant) => restaurant.name.length > 0)
     .slice(0, 15);
@@ -284,11 +284,9 @@ export default function HomePage() {
   return (
     <main className="page">
       <header className="hero">
-        <p className="eyebrow">Foodspinner</p>
+        <p className="eyebrow">Meal Spinner</p>
         <h1>Spin For Your Next Meal</h1>
-        <p className="subtitle">
-          Load restaurants from a Google Sheet and spin the wheel.
-        </p>
+
       </header>
 
       <section className="panel controls" aria-label="Data source">
@@ -335,15 +333,19 @@ export default function HomePage() {
         </div>
 
         <p className="winner" aria-live="polite">
-          {winnerRestaurant ? `Tonight: ${winnerRestaurant.name}` : "Spin to pick a restaurant."}
+          {winnerRestaurant ? (
+            <>Let&rsquo;s Get: <span className="place">{winnerRestaurant.name}!</span></>
+          ) : (
+            "Spin to pick a restaurant."
+          )}
         </p>
 
-        {winnerRestaurant?.orders?.length > 0 ? (
+        {winnerRestaurant?.favorites?.length > 0 ? (
           <div className="winner-orders" aria-live="polite">
-            <p>What to order:</p>
+            <p>Favorites:</p>
             <ul>
-              {winnerRestaurant.orders.map((order, index) => (
-                <li key={`${winnerRestaurant.name}-order-${index}`}>{order}</li>
+              {winnerRestaurant.favorites.map((favorite, index) => (
+                <li key={`${winnerRestaurant.name}-favorite-${index}`}>{favorite}</li>
               ))}
             </ul>
           </div>

@@ -196,7 +196,7 @@ body {
 }
 
 .wheel-wrap {
-  width: 75%;
+  width: 100%;
   max-width: 980px;
   aspect-ratio: 1 / 1;
   position: relative;
@@ -269,16 +269,16 @@ body {
 
 .winner {
   margin: 0;
-  font-size: 1.1rem;
+  font-size: 1.7rem;
   text-align: center;
   font-weight: 700;
+}
+.winner .place {
+  color: rgb(26, 117, 32);
 }
 
 .winner-orders {
   width: min(100%, 640px);
-  border: 1px solid #d8e2f0;
-  border-radius: 14px;
-  background: #f8fbff;
   padding: 0.75rem 0.9rem;
 }
 
@@ -299,6 +299,12 @@ body {
 .winner-orders li {
   font-size: 0.9rem;
   color: #374151;
+}
+
+@media (min-width: 760px) {
+  .wheel-wrap {
+    width: 75%;
+  }
 }
 
 @media (min-width: 900px) {

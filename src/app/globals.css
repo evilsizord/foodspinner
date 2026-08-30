@@ -264,10 +264,30 @@ body {
 }
 
 .btn-spin {
-  width: 100%;
-  max-width: 260px;
   color: #111827;
   background: linear-gradient(90deg, #fbbf24, #f59e0b);
+}
+
+.center-spin {
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  transform: translate(-50%, -50%);
+  width: clamp(64px, 16vw, 108px);
+  height: clamp(64px, 16vw, 108px);
+  min-height: 0;
+  padding: 0;
+  border-radius: 50%;
+  border: 3px solid #10131a;
+  font-size: clamp(0.82rem, 2vw, 1rem);
+  z-index: 4;
+  box-shadow:
+    0 6px 18px rgba(0, 0, 0, 0.22),
+    inset 0 0 0 2px rgba(255, 255, 255, 0.45);
+}
+
+.center-spin:not(:disabled):hover {
+  transform: translate(-50%, -50%) scale(1.03);
 }
 
 .winner {

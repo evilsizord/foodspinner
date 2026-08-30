@@ -183,7 +183,6 @@ function Wheel({ entries, rotation }) {
             );
           })}
         </g>
-        <circle cx="50" cy="50" r="7" fill="#10131a" />
       </svg>
     </div>
   );
@@ -317,10 +316,6 @@ export default function HomePage() {
       </section>
 
       <section className="panel spinner" aria-label="Restaurant spinner">
-        <button type="button" className="btn btn-spin" onClick={spinWheel} disabled={!canSpin}>
-          {spinning ? "Spinning..." : "Spin"}
-        </button>
-
         <div className="wheel-wrap">
           <div className="pointer" aria-hidden="true" />
           <div className={`wheel-shell ${spinning ? "is-spinning" : ""}`}>
@@ -330,6 +325,9 @@ export default function HomePage() {
               <div className="empty-wheel">No restaurants loaded.</div>
             )}
           </div>
+          <button type="button" className="btn btn-spin center-spin" onClick={spinWheel} disabled={!canSpin}>
+            {spinning ? "..." : "Spin"}
+          </button>
         </div>
 
         <p className="winner" aria-live="polite">

@@ -77,6 +77,7 @@ body {
   background: transparent;
   border: 0;
   box-shadow: none;
+  padding: 0 0.5rem;
 }
 
 .controls-head {
@@ -235,7 +236,7 @@ body {
 
 .wheel-label {
   fill: #ffffff;
-  font-size: 3.3px;
+  font-size: 3.8px;
   font-weight: 700;
   letter-spacing: 0.02em;
 }
@@ -263,6 +264,14 @@ body {
   z-index: 3;
 }
 
+@media (min-width: 760px) {
+  .pointer {
+    border-left: 22px solid transparent;
+    border-right: 22px solid transparent;
+    border-top: 42px solid #10131a;
+  }
+}
+
 .btn-spin {
   color: #111827;
   background: linear-gradient(90deg, #fbbf24, #f59e0b);
@@ -279,7 +288,7 @@ body {
   padding: 0;
   border-radius: 50%;
   border: 3px solid #10131a;
-  font-size: clamp(0.82rem, 2vw, 1rem);
+  font-size: clamp(0.82rem, 2vw, 1.5rem);
   z-index: 4;
   box-shadow:
     0 6px 18px rgba(0, 0, 0, 0.22),

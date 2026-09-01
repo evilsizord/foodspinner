@@ -5,11 +5,11 @@ import { useEffect, useState } from "react";
 const WHEEL_COLORS = [
   "#f25f5c",
   "#247ba0",
-  "#70c1b3",
+  "#136f63",
   "#f3a712",
   "#8f2d56",
   "#3f88c5",
-  "#136f63",
+  "#70c1b3",
   "#ef476f",
   "#118ab2",
   "#ffd166",
